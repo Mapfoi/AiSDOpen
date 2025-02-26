@@ -5,8 +5,8 @@ uses
   Math;
 
 const
-  WIDTH = 10;
-  HEIGHT = 10;
+  WIDTH = 15;
+  HEIGHT = 15;
 
 type
   TFloor = array [1 .. HEIGHT, 1 .. WIDTH] of Char;
@@ -16,17 +16,59 @@ type
   end;
 
 var
-  Floor3: TFloor = ('##########', '#   #   S#', '#        #', '#   #    #',
-    '## #### ##', '#    #   #', '#    #   #', '#  #######', '#S       #',
-    '##########');
+  Floor3: TFloor = (
+    '###############',
+    '#     #     S #',
+    '#             #',
+    '#     #       #',
+    '##   ####    ##',
+    '#      #      #',
+    '#      #      #',
+    '#   ########  #',
+    '#             #',
+    '#   ########  #',
+    '#      #      #',
+    '#      #      #',
+    '##   ###   ## #',
+    '#S            #',
+    '###############'
+  );
 
-  Floor2: TFloor = ('##########', '#E  #   C#', '#        #', '#   #    #',
-    '## #### ##', '#    #   #', '#    #   #', '#  #######', '#C      E#',
-    '##########');
+  Floor2: TFloor = (
+    '###############',
+    '#E           C#',
+    '#             #',
+    '#             #',
+    '#     #       #',
+    '#     #       #',
+    '#             #',
+    '#   ########  #',
+    '#             #',
+    '#             #',
+    '#             #',
+    '#             #',
+    '#             #',
+    '#C           E#',
+    '###############'
+  );
 
-  Floor1: TFloor = ('##########', '#J       #', '### ##   #', '#   ######',
-    '#     #  P', '#        #', '#     #  #', '##### ####', '#       J#',
-    '##########');
+  Floor1: TFloor = (
+    '###############',
+    '#J          P#',
+    '#             #',
+    '#             #',
+    '#      #      #',
+    '#      #      #',
+    '#             #',
+    '#   ########  #',
+    '#             #',
+    '#             #',
+    '#             #',
+    '#             #',
+    '#             #',
+    '#J           J#',
+    '###############'
+  );
 
   Visited: array [1 .. HEIGHT, 1 .. WIDTH] of Boolean;
   Path: array [1 .. HEIGHT, 1 .. WIDTH] of Boolean;
@@ -34,18 +76,8 @@ var
 
 { Глобальные массивы направлений (вверх, вниз, влево, вправо) }
 var
-  dx: array [1 .. 4] of Integer = (
-    -1,
-    1,
-    0,
-    0
-  );
-  dy: array [1 .. 4] of Integer = (
-    0,
-    0,
-    -1,
-    1
-  );
+  dx: array [1 .. 4] of Integer = (-1, 1, 0, 0);
+  dy: array [1 .. 4] of Integer = (0, 0, -1, 1);
 
 { Вывод предыстории и легенды карты }
 procedure PrintIntro;
@@ -56,9 +88,10 @@ begin
   Writeln('Легенда карты:');
   Writeln('  # - стена');
   Writeln('  (пробел) - свободное пространство');
-  Writeln('  S - лестницы на 3 этаже (ведут на 2 этаж в случайную из точек J)');
-  Writeln('  E - лифты на 2 этаже (ведут на 1 этаж в случайную из точек С)');
+  Writeln('  S - лестницы на 3 этаже (выход с 3-го этажа)');
+  Writeln('  E - лифты на 2 этаже (выход с 2-го этажа)');
   Writeln('  P - выход с 1 этажа');
+  Writeln('  J - точка появления на 1 этаже');
   Writeln('  X - ваше текущее местоположение');
   Writeln;
   Writeln('Следуйте карте, чтобы спастись!');
@@ -81,8 +114,8 @@ end;
 
 { Вывод маршрута.
   Если клетка является стартовой, выводится "X".
-  Если клетка входит в найденный путь, выводится символ пути,
-  за исключением ситуации, когда эта клетка уже является точкой назначения. }
+  Если клетка входит в найденный путь, выводится специальный символ,
+  за исключением случая, когда эта клетка уже содержит целевой символ. }
 procedure PrintPath(var floor: TFloor; startX, startY: Integer; target: Char);
 var
   i, j: Integer;
@@ -94,7 +127,7 @@ begin
       if (i = startX) and (j = startY) then
         Write('X ')
       else if (floor[i, j] = target) then
-        Write(floor[i, j], ' ') { точка назначения выводится без изменений }
+        Write(floor[i, j], ' ')
       else if Path[i, j] then
         Write(Char($04), ' ')
       else
@@ -106,25 +139,19 @@ end;
 
 { Реализация BFS для поиска кратчайшего пути.
   Если путь до символа target найден, функция восстанавливает его,
-  отмечая только клетки минимального маршрута в массиве Path }
-function BFSPath(var floor: TFloor; startX, startY: Integer;
-  target: Char): Boolean;
+  отмечая клетки маршрута в массиве Path. }
+function BFSPath(var floor: TFloor; startX, startY: Integer; target: Char): Boolean;
 var
   queue: array of TPoint;
   head, tail, i, nx, ny: Integer;
   current, neighbor, targetPoint: TPoint;
   found: Boolean;
   Parent: array [1 .. HEIGHT, 1 .. WIDTH] of TPoint;
-  j: Integer;
 begin
   ResetArrays;
   { Инициализируем массив предков }
   for i := 1 to HEIGHT do
-    for j := 1 to WIDTH do
-    begin
-      Parent[i, j].x := -1;
-      Parent[i, j].y := -1;
-    end;
+    FillChar(Parent[i], SizeOf(Parent[i]), 0);
 
   SetLength(queue, HEIGHT * WIDTH);
   head := 0;
@@ -135,7 +162,7 @@ begin
   queue[tail] := current;
   Inc(tail);
   Visited[startX, startY] := True;
-  Parent[startX, startY] := current; { Родитель стартовой клетки — она же сама }
+  Parent[startX, startY] := current;
 
   found := False;
 
@@ -143,14 +170,12 @@ begin
   begin
     current := queue[head];
     Inc(head);
-
     if floor[current.x, current.y] = target then
     begin
       found := True;
       targetPoint := current;
       Break;
     end;
-
     for i := 1 to 4 do
     begin
       nx := current.x + dx[i];
@@ -174,9 +199,9 @@ begin
     Exit;
   end;
 
-  { Восстанавливаем маршрут, идя от найденной клетки-цели к старту }
+  { Восстанавливаем маршрут от найденной цели к стартовой позиции }
   current := targetPoint;
-  while not((current.x = startX) and (current.y = startY)) do
+  while not ((current.x = startX) and (current.y = startY)) do
   begin
     Path[current.x, current.y] := True;
     current := Parent[current.x, current.y];
@@ -195,9 +220,8 @@ begin
 end;
 
 { Навигация по этажу:
-  Если найден путь до цели (target), выводится только кратчайший маршрут }
-procedure NavigateFloor(var floor: TFloor; startX, startY: Integer;
-  target: Char);
+  Если найден путь до цели (target), выводится кратчайший маршрут }
+procedure NavigateFloor(var floor: TFloor; startX, startY: Integer; target: Char);
 begin
   ResetArrays;
   if BFSPath(floor, startX, startY, target) then
@@ -206,7 +230,7 @@ begin
     Writeln;
   end
   else
-    Writeln;
+    Writeln('Путь не найден');
 end;
 
 var
@@ -215,9 +239,9 @@ var
 
 begin
   Randomize;
-  { Вывод предыстории и легенды карты }
   PrintIntro;
 
+  { Выбираем этаж случайным образом }
   CurrentFloor := Random(3) + 1;
   case CurrentFloor of
     1:
@@ -233,8 +257,17 @@ begin
         NavigateFloor(Floor2, startX, startY, 'E');
         Writeln('=== Переход на 1 этаж ===');
         randomJ := Random(2) + 1;
-        startX := IfThen(randomJ = 1, 2, 9);
-        startY := 2;
+        { Здесь можно задать фиксированные координаты перехода (например, угловые) }
+        if randomJ = 1 then
+        begin
+          startX := 2;  { верхний левый угол игровой области }
+          startY := 2;
+        end
+        else
+        begin
+          startX := 14; { нижний правый угол игровой области }
+          startY := 14;
+        end;
         NavigateFloor(Floor1, startX, startY, 'P');
       end;
     3:
@@ -248,13 +281,13 @@ begin
           randomC := Random(2) + 1;
           if randomC = 1 then
           begin
-            startX := 2; // в строке 2 в позиции 9 находится 'C'
-            startY := 9;
+            startX := 2;  { верхний левый угол игровой области }
+            startY := 14; { верхний правый угол }
           end
           else
           begin
-            startX := 9; // в строке 9 в позиции 2 находится 'C'
-            startY := 2;
+            startX := 14; { нижний левый угол }
+            startY := 2;  { нижний правый угол }
           end;
           NavigateFloor(Floor2, startX, startY, 'E');
 
@@ -262,13 +295,13 @@ begin
           randomJ := Random(2) + 1;
           if randomJ = 1 then
           begin
-            startX := 2; // выбираем координаты для 'J'
+            startX := 2;
             startY := 2;
           end
           else
           begin
-            startX := 9;
-            startY := 9;
+            startX := 14;
+            startY := 14;
           end;
           NavigateFloor(Floor1, startX, startY, 'P');
         end
@@ -277,9 +310,5 @@ begin
       end;
   end;
   Readln;
-  Readln;
-  Readln;
-  Readln;
-  WriteLn('As');
 end.
 
