@@ -14,7 +14,7 @@ type
   TPoint = record
     x, y: Integer;
   end;
-//tyt typa cheta menyau
+
 var
   Floor3: TFloor = (
     '###############',
