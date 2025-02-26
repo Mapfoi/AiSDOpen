@@ -1,4 +1,4 @@
-program Prishelcy;
+program Project5;
 
 uses
   SysUtils,
