@@ -151,7 +151,7 @@ var
   Parent: array [1 .. HEIGHT, 1 .. WIDTH] of TPoint;
 begin
   ResetArrays;
-  { Инициализируем массив предков }
+  { Инициализируем массив }
   for i := 1 to HEIGHT do
     FillChar(Parent[i], SizeOf(Parent[i]), 0);
 
