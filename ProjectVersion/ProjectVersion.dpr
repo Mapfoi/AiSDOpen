@@ -16,6 +16,8 @@ type
   end;
 
 var
+
+  povt : Integer;
   Floor3: TFloor = (
     '###############',
     '#     #      S#',
@@ -238,6 +240,8 @@ var
   randomC, randomJ: Integer;
 
 begin
+  For povt := 1 to 20 do
+  begin
   Randomize;
   PrintIntro;
 
@@ -311,5 +315,6 @@ begin
   end;
   Readln;
   readln;
+  end;
 end.
 
