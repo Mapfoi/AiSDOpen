@@ -240,7 +240,7 @@ var
   randomC, randomJ: Integer;
 
 begin
-  For povt := 1 to 20 do
+  For povt := 1 to 30 do
   begin
   Randomize;
   PrintIntro;
